@@ -27,7 +27,7 @@ A GitHub Action to easily install and run Ollama models in your workflow. Suppor
 - name: Run Ollama Model
   uses: phil65/ollama-github-action@v1
   with:
-    model: llama2
+    model: "smollm2:135m"
     prompt: "Write a hello world program in Python"
 ```
 
@@ -49,7 +49,7 @@ A GitHub Action to easily install and run Ollama models in your workflow. Suppor
 - name: Run Ollama with Docker
   uses: phil65/ollama-github-action@v1
   with:
-    model: llama2
+    model: "smollm2:135m"
     use_docker: true
     docker_compose_file: './custom-compose.yml'
 ```

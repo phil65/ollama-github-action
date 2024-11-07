@@ -9,7 +9,7 @@ if [ "${DEBUG}" = "true" ]; then
 fi
 
 # Default environment variables
-MODEL=${MODEL:-"llama2"}
+MODEL=${MODEL:-"smollm2"}
 COMMAND=${COMMAND:-"run"}
 PORT=${PORT:-11434}
 HOST=${HOST:-"127.0.0.1"}

@@ -14,7 +14,7 @@ jobs:
       - name: Test Ollama
         uses: ./
         with:
-          model: llama2
+          model: "smollm2:135m"
           prompt: "Hello from Linux!"
 
   test-macos:
@@ -24,7 +24,7 @@ jobs:
       - name: Test Ollama
         uses: ./
         with:
-          model: llama2
+          model: "smollm2:135m"
           prompt: "Hello from macOS!"
 
   test-windows:
@@ -34,6 +34,6 @@ jobs:
       - name: Test Ollama
         uses: ./
         with:
-          model: llama2
+          model: "smollm2:135m"
           prompt: "Hello from Windows!"
           install_path: 'C:\Ollama'
