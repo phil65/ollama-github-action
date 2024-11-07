@@ -41,7 +41,7 @@ A GitHub Action to easily install and run Ollama models in your workflow. Suppor
 | Input | Description | Required | Default |
 |-------|-------------|----------|---------|
 | `model` | Ollama model to use (e.g., llama2, codellama, mistral) | Yes | `smollm2:135m` |
-| `command` | Command to run (`run` or `serve`) | No | `run` |
+| `command` | Command to run (`run` or `serve`) | No | `serve` |
 | `prompt` | Prompt to send to the model | No | `Hello, how are you?` |
 | `timeout` | Timeout in seconds for operations | No | `300` |
 

@@ -10,7 +10,7 @@ inputs:
   command:
     description: "Ollama command to run (run/serve)"
     required: false
-    default: "run"
+    default: "serve"
   prompt:
     description: "Prompt to send to the model"
     required: false
