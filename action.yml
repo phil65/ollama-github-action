@@ -209,14 +209,23 @@ runs:
         if [ "${{ steps.platform.outputs.platform }}" = "windows" ]; then
           powershell -Command "Stop-Process -Name ollama -Force -ErrorAction SilentlyContinue"
         else
+          # More robust process cleanup
           if [ -f ollama.pid ]; then
-            kill $(cat ollama.pid) || true
-          else
-            pkill ollama || true
+            PID=$(cat ollama.pid)
+            if ps -p $PID > /dev/null 2>&1; then
+              kill $PID || true
+            else
+              echo "Process $PID not found (already terminated)"
+            fi
           fi
+
+          # Backup cleanup method
+          pkill ollama 2>/dev/null || true
         fi
 
-        # Display logs for debugging
+        # Display logs for debugging if they exist
         echo "Server logs:"
-        cat ollama.log
+        [ -f ollama.log ] && cat ollama.log
         [ -f ollama_error.log ] && echo "Error logs:" && cat ollama_error.log
+
+        exit 0  # Ensure cleanup doesn't fail the workflow
