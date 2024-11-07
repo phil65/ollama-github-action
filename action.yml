@@ -63,26 +63,29 @@ runs:
       if: steps.platform.outputs.platform == 'windows'
       shell: pwsh
       run: |
-        Write-Host "Setting up winget..."
+        Write-Host "Installing Ollama for Windows..."
 
         try {
-          # Install winget
-          $apiLatestUrl = "https://api.github.com/repos/microsoft/winget-cli/releases/latest"
+          # Get latest release info
+          $apiLatestUrl = "https://api.github.com/repos/ollama/ollama/releases/latest"
           $latestRelease = Invoke-RestMethod -Uri $apiLatestUrl
-          $msixBundleUrl = $latestRelease.assets | Where-Object { $_.name -match "\.msixbundle$" } | Select-Object -ExpandProperty browser_download_url
+          $zipUrl = $latestRelease.assets | Where-Object { $_.name -match "windows-amd64\.zip$" } | Select-Object -ExpandProperty browser_download_url
 
-          Write-Host "Downloading winget..."
-          Invoke-WebRequest -Uri $msixBundleUrl -OutFile "winget.msixbundle"
+          # Create installation directory
+          $installPath = "${{ inputs.install_path }}"
+          if (-not (Test-Path $installPath)) {
+            New-Item -Path $installPath -ItemType Directory -Force
+          }
 
-          Write-Host "Installing winget..."
-          Add-AppxPackage -Path "winget.msixbundle"
+          # Download and extract
+          Write-Host "Downloading Ollama..."
+          Invoke-WebRequest -Uri $zipUrl -OutFile "ollama.zip"
 
-          # Install Ollama using winget
-          Write-Host "Installing Ollama using winget..."
-          winget install Ollama.Ollama --accept-source-agreements --accept-package-agreements
+          Write-Host "Extracting Ollama..."
+          Expand-Archive -Path "ollama.zip" -DestinationPath $installPath -Force
 
-          # Update PATH environment variable
-          $env:PATH = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+          # Add to PATH
+          $env:PATH = "$installPath;$env:PATH"
           Write-Host "PATH=$env:PATH" | Out-File -FilePath $env:GITHUB_ENV -Append
 
           Write-Host "Ollama installed successfully"
@@ -93,11 +96,10 @@ runs:
           exit 1
         } finally {
           # Cleanup
-          if (Test-Path "winget.msixbundle") {
-            Remove-Item "winget.msixbundle" -Force
+          if (Test-Path "ollama.zip") {
+            Remove-Item "ollama.zip" -Force
           }
         }
-
     # Start Ollama Server (Platform Independent)
     - name: Start Ollama Server
       shell: bash
