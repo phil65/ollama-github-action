@@ -53,9 +53,9 @@ runs:
           /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
         fi
 
-        # Install Ollama using Homebrew
-        echo "Installing Ollama using Homebrew..."
-        brew install ollama
+        # Install coreutils and Ollama using Homebrew
+        echo "Installing dependencies and Ollama using Homebrew..."
+        brew install coreutils ollama
 
         echo "Ollama installed successfully"
 
@@ -63,10 +63,21 @@ runs:
       if: steps.platform.outputs.platform == 'windows'
       shell: pwsh
       run: |
-        Write-Host "Installing Ollama for Windows..."
+        Write-Host "Setting up winget..."
 
         try {
-          # Install using winget
+          # Install winget
+          $apiLatestUrl = "https://api.github.com/repos/microsoft/winget-cli/releases/latest"
+          $latestRelease = Invoke-RestMethod -Uri $apiLatestUrl
+          $msixBundleUrl = $latestRelease.assets | Where-Object { $_.name -match "\.msixbundle$" } | Select-Object -ExpandProperty browser_download_url
+
+          Write-Host "Downloading winget..."
+          Invoke-WebRequest -Uri $msixBundleUrl -OutFile "winget.msixbundle"
+
+          Write-Host "Installing winget..."
+          Add-AppxPackage -Path "winget.msixbundle"
+
+          # Install Ollama using winget
           Write-Host "Installing Ollama using winget..."
           winget install Ollama.Ollama --accept-source-agreements --accept-package-agreements
 
@@ -78,7 +89,13 @@ runs:
 
         } catch {
           Write-Host "Error during installation: $_"
+          Write-Host $_.ScriptStackTrace
           exit 1
+        } finally {
+          # Cleanup
+          if (Test-Path "winget.msixbundle") {
+            Remove-Item "winget.msixbundle" -Force
+          }
         }
 
     # Start Ollama Server (Platform Independent)
@@ -113,7 +130,11 @@ runs:
     - name: Pull Model
       shell: bash
       run: |
-        timeout ${{ inputs.timeout }} ollama pull ${{ inputs.model }}
+        if [ "${{ steps.platform.outputs.platform }}" = "macos" ]; then
+          gtimeout ${{ inputs.timeout }} ollama pull ${{ inputs.model }}
+        else
+          timeout ${{ inputs.timeout }} ollama pull ${{ inputs.model }}
+        fi
 
     # Execute Command
     - name: Execute Command
@@ -123,7 +144,11 @@ runs:
           echo "Ollama is running in server mode"
           sleep ${{ inputs.timeout }}
         else
-          timeout ${{ inputs.timeout }} ollama run ${{ inputs.model }} "${{ inputs.prompt }}"
+          if [ "${{ steps.platform.outputs.platform }}" = "macos" ]; then
+            gtimeout ${{ inputs.timeout }} ollama run ${{ inputs.model }} "${{ inputs.prompt }}"
+          else
+            timeout ${{ inputs.timeout }} ollama run ${{ inputs.model }} "${{ inputs.prompt }}"
+          fi
         fi
 
     # Cleanup
