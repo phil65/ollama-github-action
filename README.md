@@ -40,7 +40,6 @@ A GitHub Action to easily install and run Ollama models in your workflow. Suppor
     model: codellama
     command: serve
     timeout: 600
-    install_path: 'C:\Custom\Ollama'  # Windows only
 ```
 
 ### Docker Compose Example
@@ -62,7 +61,6 @@ A GitHub Action to easily install and run Ollama models in your workflow. Suppor
 | `command` | Command to run (`run` or `serve`) | No | `run` |
 | `prompt` | Prompt to send to the model | No | `Hello, how are you?` |
 | `timeout` | Timeout in seconds for operations | No | `300` |
-| `install_path` | Custom installation path (Windows only) | No | `C:\Program Files\Ollama` |
 
 ## Supported Models
 

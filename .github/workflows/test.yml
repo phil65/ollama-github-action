@@ -36,4 +36,3 @@ jobs:
         with:
           model: "smollm2:135m"
           prompt: "Hello from Windows!"
-          install_path: 'C:\Ollama'

@@ -192,9 +192,9 @@ runs:
           sleep ${{ inputs.timeout }}
         else
           echo "Running model with prompt..."
-          if [ "${{ steps.platform.outputs.platform }}" = "windows" ]; then
-            OLLAMA_EXE="C:/ollama/ollama.exe"
-            powershell -Command "& '$OLLAMA_EXE' run ${{ inputs.model }} '${{ inputs.prompt }}'"
+          # Disable progress spinner and ensure proper output handling
+          if [ "${{ steps.platform.outputs.platform }}" = "macos" ]; then
+            OLLAMA_CPU_ONLY=1 OLLAMA_NOCOLOR=1 OLLAMA_NOSPINNER=1 ollama run ${{ inputs.model }} "${{ inputs.prompt }}" 2>/dev/null
           else
             ollama run ${{ inputs.model }} "${{ inputs.prompt }}"
           fi
