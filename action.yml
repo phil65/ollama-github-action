@@ -1,31 +1,31 @@
-name: 'Ollama Runner Action'
-description: 'Install and run Ollama with specified models'
-author: 'Your Name'
+name: "Ollama Runner Action"
+description: "Install and run Ollama with specified models"
+author: "Your Name"
 
 inputs:
   model:
-    description: 'Ollama model to use (e.g., llama2, codellama, mistral)'
+    description: "Ollama model to use (e.g., llama2, codellama, mistral)"
     required: true
-    default: 'llama2'
+    default: "llama2"
   command:
-    description: 'Ollama command to run (run/serve)'
+    description: "Ollama command to run (run/serve)"
     required: false
-    default: 'run'
+    default: "run"
   prompt:
-    description: 'Prompt to send to the model'
+    description: "Prompt to send to the model"
     required: false
-    default: 'Hello, how are you?'
+    default: "Hello, how are you?"
   timeout:
-    description: 'Timeout in seconds for operations'
+    description: "Timeout in seconds for operations"
     required: false
-    default: '300'
+    default: "300"
   install_path:
-    description: 'Custom installation path (Windows only)'
+    description: "Custom installation path (Windows only)"
     required: false
     default: 'C:\Program Files\Ollama'
 
 runs:
-  using: 'composite'
+  using: "composite"
   steps:
     # Platform Detection
     - name: Detect Platform
@@ -67,23 +67,51 @@ runs:
       if: steps.platform.outputs.platform == 'windows'
       shell: pwsh
       run: |
+        Write-Host "Installing Ollama for Windows..."
+
+        # Define paths
         $installerUrl = "https://ollama.ai/download/OllamaSetup.exe"
         $installerPath = "$env:TEMP\OllamaSetup.exe"
-
-        # Download installer
-        Invoke-WebRequest -Uri $installerUrl -OutFile $installerPath
-
-        # Create installation directory
         $installPath = "${{ inputs.install_path }}"
-        New-Item -Path $installPath -ItemType Directory -Force
 
-        # Install silently
-        Start-Process -FilePath $installerPath -ArgumentList "/S /D=$installPath" -Wait
+        try {
+          # Download installer
+          Write-Host "Downloading Ollama installer..."
+          Invoke-WebRequest -Uri $installerUrl -OutFile $installerPath -UseBasicParsing
 
-        # Add to PATH
-        $env:PATH = "$installPath;$env:PATH"
-        echo "PATH=$env:PATH" >> $GITHUB_ENV
-        echo "Installed Ollama for Windows"
+          # Create installation directory
+          if (-not (Test-Path $installPath)) {
+            New-Item -Path $installPath -ItemType Directory -Force
+          }
+
+          # Install silently with timeout
+          Write-Host "Running installer..."
+          $process = Start-Process -FilePath $installerPath -ArgumentList "/S", "/D=$installPath" -PassThru -Wait -Timeout 300
+
+          if ($process.ExitCode -ne 0) {
+            throw "Installation failed with exit code: $($process.ExitCode)"
+          }
+
+          # Add to PATH
+          $currentPath = [Environment]::GetEnvironmentVariable("Path", "Machine")
+          if (-not $currentPath.Contains($installPath)) {
+            $newPath = "$currentPath;$installPath"
+            [Environment]::SetEnvironmentVariable("Path", $newPath, "Machine")
+            $env:PATH = "$installPath;$env:PATH"
+          }
+
+          Write-Host "PATH=$env:PATH" | Out-File -FilePath $env:GITHUB_ENV -Append
+          Write-Host "Ollama installed successfully"
+
+        } catch {
+          Write-Host "Error during installation: $_"
+          exit 1
+        } finally {
+          # Cleanup installer
+          if (Test-Path $installerPath) {
+            Remove-Item $installerPath -Force
+          }
+        }
 
     # Start Ollama Server (Platform Independent)
     - name: Start Ollama Server
