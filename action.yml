@@ -11,7 +11,13 @@ inputs:
     description: "Timeout in seconds for operations"
     required: false
     default: "300"
-
+outputs:
+  server-url:
+    description: "URL of the Ollama server"
+    value: ${{ steps.verify-server.outputs.server-url }}
+  status:
+    description: "Status of the Ollama server"
+    value: ${{ steps.verify-server.outputs.status }}
 runs:
   using: "composite"
   steps:
@@ -177,8 +183,18 @@ runs:
         fi
 
     - name: Verify Server Status
+      id: verify-server # Add this ID
       shell: bash
       run: |
-        echo "Ollama server is running and ready for use"
-        echo "Server is available at http://localhost:11434"
-        curl -s http://localhost:11434/api/version
+        SERVER_URL="http://localhost:11434"
+
+        if curl -s "$SERVER_URL/api/version" >/dev/null; then
+          echo "Ollama server is running and ready for use"
+          echo "Server is available at $SERVER_URL"
+          echo "server-url=$SERVER_URL" >> $GITHUB_OUTPUT
+          echo "status=running" >> $GITHUB_OUTPUT
+        else
+          echo "Server verification failed"
+          echo "status=failed" >> $GITHUB_OUTPUT
+          exit 1
+        fi
