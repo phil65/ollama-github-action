@@ -19,10 +19,6 @@ inputs:
     description: "Timeout in seconds for operations"
     required: false
     default: "300"
-  install_path:
-    description: "Custom installation path (Windows only)"
-    required: false
-    default: 'C:\Program Files\Ollama'
 
 runs:
   using: "composite"
@@ -47,70 +43,42 @@ runs:
         curl -fsSL https://ollama.ai/install.sh | sh
         echo "Installed Ollama for Linux"
 
-    # macOS Installation
     - name: Install Ollama (macOS)
       if: steps.platform.outputs.platform == 'macos'
       shell: bash
       run: |
-        if [ "$(uname -m)" == "arm64" ]; then
-          OLLAMA_FILE="ollama-darwin-arm64"
-        else
-          OLLAMA_FILE="ollama-darwin-amd64"
+        # Check if Homebrew is installed, install if not
+        if ! command -v brew &> /dev/null; then
+          echo "Installing Homebrew..."
+          /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
         fi
-        curl -fsSL "https://ollama.ai/download/${OLLAMA_FILE}" -o ollama
-        chmod +x ollama
-        sudo mv ollama /usr/local/bin/
-        echo "Installed Ollama for macOS"
 
-    # Windows Installation
+        # Install Ollama using Homebrew
+        echo "Installing Ollama using Homebrew..."
+        brew install ollama
+
+        echo "Ollama installed successfully"
+
     - name: Install Ollama (Windows)
       if: steps.platform.outputs.platform == 'windows'
       shell: pwsh
       run: |
         Write-Host "Installing Ollama for Windows..."
 
-        # Define paths
-        $installerUrl = "https://ollama.ai/download/OllamaSetup.exe"
-        $installerPath = "$env:TEMP\OllamaSetup.exe"
-        $installPath = "${{ inputs.install_path }}"
-
         try {
-          # Download installer
-          Write-Host "Downloading Ollama installer..."
-          Invoke-WebRequest -Uri $installerUrl -OutFile $installerPath -UseBasicParsing
+          # Install using winget
+          Write-Host "Installing Ollama using winget..."
+          winget install Ollama.Ollama --accept-source-agreements --accept-package-agreements
 
-          # Create installation directory
-          if (-not (Test-Path $installPath)) {
-            New-Item -Path $installPath -ItemType Directory -Force
-          }
-
-          # Install silently with timeout
-          Write-Host "Running installer..."
-          $process = Start-Process -FilePath $installerPath -ArgumentList "/S", "/D=$installPath" -PassThru -Wait
-
-          if ($process.ExitCode -ne 0) {
-            throw "Installation failed with exit code: $($process.ExitCode)"
-          }
-
-          # Add to PATH
-          $currentPath = [Environment]::GetEnvironmentVariable("Path", "Machine")
-          if (-not $currentPath.Contains($installPath)) {
-            $newPath = "$currentPath;$installPath"
-            [Environment]::SetEnvironmentVariable("Path", $newPath, "Machine")
-            $env:PATH = "$installPath;$env:PATH"
-          }
-
+          # Update PATH environment variable
+          $env:PATH = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
           Write-Host "PATH=$env:PATH" | Out-File -FilePath $env:GITHUB_ENV -Append
+
           Write-Host "Ollama installed successfully"
 
         } catch {
           Write-Host "Error during installation: $_"
           exit 1
-        } finally {
-          # Cleanup installer
-          if (Test-Path $installerPath) {
-            Remove-Item $installerPath -Force
-          }
         }
 
     # Start Ollama Server (Platform Independent)
