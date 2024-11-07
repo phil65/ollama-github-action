@@ -9,30 +9,20 @@ A GitHub Action to easily install and run Ollama models in your workflow. Suppor
 
 - 🚀 Cross-platform support (Linux, macOS, Windows)
 - 🔄 Automatic installation and setup
-- 🎯 Run specific model commands or serve models
+- 🎯 Run specific models
 - ⚡ Fast model pulling and execution
 
 
 ## Usage
 
-### Basic Example
 
-```yaml
-- name: Run Ollama Model
-  uses: phil65/ollama-github-action@v1
-  with:
-    model: "smollm2:135m"
-    prompt: "Write a hello world program in Python"
-```
-
-### Advanced Example
+### Example
 
 ```yaml
 - name: Serve Ollama Model
   uses: phil65/ollama-github-action@v1
   with:
     model: "smollm2:135m"
-    command: serve
     timeout: 600
 ```
 
@@ -41,9 +31,7 @@ A GitHub Action to easily install and run Ollama models in your workflow. Suppor
 | Input | Description | Required | Default |
 |-------|-------------|----------|---------|
 | `model` | Ollama model to use (e.g., llama2, codellama, mistral) | Yes | `smollm2:135m` |
-| `command` | Command to run (`run` or `serve`) | No | `serve` |
-| `prompt` | Prompt to send to the model | No | `Hello, how are you?` |
-| `timeout` | Timeout in seconds for operations | No | `300` |
+| `timeout` | Timeout in seconds until server gets killed | No | `300` |
 
 ## Platform-Specific Notes
 
@@ -58,25 +46,7 @@ A GitHub Action to easily install and run Ollama models in your workflow. Suppor
 - Uses the latest release from GitHub
 - Custom installation path at C:\ollama
 
-## Examples
-
-### Using in a Workflow
-
-```yaml
-jobs:
-  generate-code:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Run Ollama
-        uses: phil65/ollama-github-action@v1
-        with:
-          model: "smollm2:135m"
-          prompt: "Write a Python function to calculate fibonacci numbers"
-```
-
-### Running as a Server
+## Example for a workflow
 
 ```yaml
 jobs:
@@ -87,7 +57,6 @@ jobs:
         uses: phil65/ollama-github-action@v1
         with:
           model: "smollm2:135m"
-          command: serve
           timeout: 3600  # 1 hour timeout
 ```
 
@@ -97,7 +66,6 @@ jobs:
 
 1. **Model Download Timeout**
    - Increase the `timeout` parameter
-   - Check network connectivity
    - Verify model name is correct
 
 2. **Memory Issues**

@@ -15,7 +15,7 @@ jobs:
         uses: ./
         with:
           model: "smollm2:135m"
-          prompt: "Hello from Linux!"
+          timeout: 5
 
   test-macos:
     runs-on: macos-latest
@@ -25,7 +25,7 @@ jobs:
         uses: ./
         with:
           model: "smollm2:135m"
-          prompt: "Hello from macOS!"
+          timeout: 5
 
   test-windows:
     runs-on: windows-latest
@@ -35,4 +35,4 @@ jobs:
         uses: ./
         with:
           model: "smollm2:135m"
-          prompt: "Hello from Windows!"
+          timeout: 5

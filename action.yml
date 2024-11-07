@@ -7,14 +7,6 @@ inputs:
     description: "Ollama model to use (e.g., llama2, codellama, mistral)"
     required: true
     default: "smollm2:135m"
-  command:
-    description: "Ollama command to run (run/serve)"
-    required: false
-    default: "serve"
-  prompt:
-    description: "Prompt to send to the model"
-    required: false
-    default: "Hello, how are you?"
   timeout:
     description: "Timeout in seconds for operations"
     required: false
@@ -184,60 +176,9 @@ runs:
           timeout ${{ inputs.timeout }} ollama pull ${{ inputs.model }}
         fi
 
-    - name: Execute Command
+    - name: Verify Server Status
       shell: bash
       run: |
-        if [ "${{ inputs.command }}" = "serve" ]; then
-          echo "Ollama is running in server mode"
-          sleep ${{ inputs.timeout }}
-        else
-          echo "Running model with prompt..."
-          # Disable progress spinner and ensure proper output handling
-          if [ "${{ steps.platform.outputs.platform }}" = "macos" ]; then
-            OLLAMA_CPU_ONLY=1 OLLAMA_NOCOLOR=1 OLLAMA_NOSPINNER=1 ollama run ${{ inputs.model }} "${{ inputs.prompt }}" 2>/dev/null
-          else
-            ollama run ${{ inputs.model }} "${{ inputs.prompt }}"
-          fi
-        fi
-
-    - name: Cleanup
-      if: always()
-      shell: bash
-      run: |
-        echo "Cleaning up Ollama processes..."
-
-        case "${{ steps.platform.outputs.platform }}" in
-          windows)
-            # Windows cleanup using both process name and path
-            powershell -Command "
-              try {
-                if (Get-Process ollama -ErrorAction SilentlyContinue) {
-                  Stop-Process -Name ollama -Force -ErrorAction SilentlyContinue
-                }
-                if (Get-Process -Name 'ollama' -ErrorAction SilentlyContinue | Where-Object { $_.Path -like '*C:/ollama/ollama.exe' }) {
-                  Stop-Process -Name 'ollama' -Force -ErrorAction SilentlyContinue
-                }
-              } catch {
-                Write-Host 'No Ollama processes found or already terminated'
-              }
-            "
-            ;;
-
-          linux|macos)
-            # Unix-like systems cleanup
-            if [ -f ollama.pid ]; then
-              PID=$(cat ollama.pid)
-              if ps -p $PID > /dev/null 2>&1; then
-                kill $PID || true
-              fi
-            fi
-            pkill ollama 2>/dev/null || true
-            ;;
-        esac
-
-        # Display logs if they exist
-        echo "Server logs:"
-        [ -f ollama.log ] && cat ollama.log
-        [ -f ollama_error.log ] && echo "Error logs:" && cat ollama_error.log
-
-        exit 0  # Ensure cleanup doesn't fail the workflow
+        echo "Ollama server is running and ready for use"
+        echo "Server is available at http://localhost:11434"
+        curl -s http://localhost:11434/api/version

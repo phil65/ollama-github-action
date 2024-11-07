@@ -10,7 +10,7 @@ fi
 
 # Default environment variables
 MODEL=${MODEL:-"smollm2"}
-COMMAND=${COMMAND:-"run"}
+COMMAND=${COMMAND:-"serve"}
 PORT=${PORT:-11434}
 HOST=${HOST:-"127.0.0.1"}
 PROMPT=${PROMPT:-"Hello, how are you?"}
@@ -64,6 +64,8 @@ ollama serve &
 # Wait for server to be ready
 wait_for_ollama
 
+echo "Running Ollama in server mode on ${HOST}:${PORT}"
+
 # Pull the specified model
 echo "Pulling model: $MODEL"
 timeout $TIMEOUT ollama pull "$MODEL"
@@ -73,27 +75,9 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# Execute based on command
-if [ "$COMMAND" = "serve" ]; then
-    echo "Running Ollama in server mode on ${HOST}:${PORT}"
-    echo "Server will remain active for $TIMEOUT seconds"
+echo "Server will remain active for $TIMEOUT seconds"
 
-    # Keep the server running for specified timeout
-    sleep $TIMEOUT &
-    wait $!
-else
-    echo "Running model with prompt: $PROMPT"
-
-    # Run the model with timeout
-    timeout $TIMEOUT ollama run "$MODEL" "$PROMPT"
-
-    if [ $? -eq 124 ]; then
-        echo "Error: Command timed out after $TIMEOUT seconds"
-        exit 1
-    elif [ $? -ne 0 ]; then
-        echo "Error: Command failed"
-        exit 1
-    fi
-fi
-
+# Keep the server running for specified timeout
+sleep $TIMEOUT &
+wait $!
 echo "Operation completed successfully"
