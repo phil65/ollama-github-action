@@ -104,29 +104,42 @@ runs:
     - name: Start Ollama Server
       shell: bash
       run: |
-        # Start Ollama in background
-        if [ "${{ steps.platform.outputs.platform }}" = "windows" ]; then
-          start /B ollama serve > ollama.log 2>&1
-        else
-          ollama serve > ollama.log 2>&1 &
-        fi
-        echo $! > ollama.pid
+        echo "Starting Ollama server..."
 
-        # Wait for server
+        if [ "${{ steps.platform.outputs.platform }}" = "windows" ]; then
+          # Windows-specific start
+          powershell -Command "Start-Process ollama -ArgumentList 'serve' -NoNewWindow -RedirectStandardOutput ollama.log -RedirectStandardError ollama_error.log"
+        else
+          # Unix-like systems (Linux/macOS)
+          ollama serve > ollama.log 2>&1 &
+          echo $! > ollama.pid
+        fi
+
+        # More robust server check
+        echo "Waiting for server to be ready..."
         TIMEOUT=30
+        READY=0
         while [ $TIMEOUT -gt 0 ]; do
-          if nc -z localhost 11434 2>/dev/null; then
-            echo "Ollama server is running"
-            break
+          if [ "${{ steps.platform.outputs.platform }}" = "windows" ]; then
+            # Windows check
+            powershell -Command "Test-NetConnection -ComputerName localhost -Port 11434 -WarningAction SilentlyContinue" && READY=1 && break
+          else
+            # Unix check
+            curl -s http://localhost:11434/api/version >/dev/null && READY=1 && break
           fi
+          echo "Waiting for server... ($TIMEOUT seconds remaining)"
           sleep 1
           TIMEOUT=$((TIMEOUT - 1))
         done
 
-        if [ $TIMEOUT -eq 0 ]; then
+        if [ $READY -eq 0 ]; then
           echo "Failed to start Ollama server"
+          cat ollama.log
+          [ -f ollama_error.log ] && cat ollama_error.log
           exit 1
         fi
+
+        echo "Ollama server is running"
 
     # Pull Model
     - name: Pull Model
@@ -146,10 +159,14 @@ runs:
           echo "Ollama is running in server mode"
           sleep ${{ inputs.timeout }}
         else
-          if [ "${{ steps.platform.outputs.platform }}" = "macos" ]; then
-            gtimeout ${{ inputs.timeout }} ollama run ${{ inputs.model }} "${{ inputs.prompt }}"
-          else
-            timeout ${{ inputs.timeout }} ollama run ${{ inputs.model }} "${{ inputs.prompt }}"
+          echo "Running model with prompt..."
+          RESPONSE=$(ollama run ${{ inputs.model }} "${{ inputs.prompt }}" 2>&1)
+          EXIT_CODE=$?
+          echo "$RESPONSE"
+
+          if [ $EXIT_CODE -ne 0 ]; then
+            echo "Error running model command"
+            exit $EXIT_CODE
           fi
         fi
 
@@ -158,10 +175,18 @@ runs:
       if: always()
       shell: bash
       run: |
+        echo "Cleaning up Ollama processes..."
         if [ "${{ steps.platform.outputs.platform }}" = "windows" ]; then
-          taskkill /F /IM ollama.exe || true
+          powershell -Command "Stop-Process -Name ollama -Force -ErrorAction SilentlyContinue"
         else
           if [ -f ollama.pid ]; then
             kill $(cat ollama.pid) || true
+          else
+            pkill ollama || true
           fi
         fi
+
+        # Display logs for debugging
+        echo "Server logs:"
+        cat ollama.log
+        [ -f ollama_error.log ] && echo "Error logs:" && cat ollama_error.log
