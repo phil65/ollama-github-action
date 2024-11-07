@@ -12,11 +12,6 @@ A GitHub Action to easily install and run Ollama models in your workflow. Suppor
 - 🎯 Run specific model commands or serve models
 - ⚡ Fast model pulling and execution
 
-## Prerequisites
-
-- GitHub Actions runner (Ubuntu 20.04+, macOS 11+, or Windows Server 2019+)
-- Minimum 8GB RAM (16GB+ recommended for larger models)
-- At least 10GB free disk space
 
 ## Usage
 
