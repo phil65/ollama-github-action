@@ -86,7 +86,7 @@ runs:
 
           # Install silently with timeout
           Write-Host "Running installer..."
-          $process = Start-Process -FilePath $installerPath -ArgumentList "/S", "/D=$installPath" -PassThru -Wait -Timeout 300
+          $process = Start-Process -FilePath $installerPath -ArgumentList "/S", "/D=$installPath" -PassThru -Wait
 
           if ($process.ExitCode -ne 0) {
             throw "Installation failed with exit code: $($process.ExitCode)"
