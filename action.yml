@@ -6,7 +6,7 @@ inputs:
   model:
     description: "Ollama model to use (e.g., llama2, codellama, mistral)"
     required: true
-    default: "llama2"
+    default: "smollm2:135m"
   command:
     description: "Ollama command to run (run/serve)"
     required: false
@@ -66,29 +66,42 @@ runs:
         Write-Host "Installing Ollama for Windows..."
 
         try {
+          # Define installation paths
+          $ollamaDir = "C:\ollama"
+          $ollamaExe = "C:\ollama\ollama.exe"
+
+          # Create installation directory
+          if (-not (Test-Path $ollamaDir)) {
+            New-Item -Path $ollamaDir -ItemType Directory -Force
+          }
+
           # Get latest release info
           $apiLatestUrl = "https://api.github.com/repos/ollama/ollama/releases/latest"
           $latestRelease = Invoke-RestMethod -Uri $apiLatestUrl
           $zipUrl = $latestRelease.assets | Where-Object { $_.name -match "windows-amd64\.zip$" } | Select-Object -ExpandProperty browser_download_url
 
-          # Create installation directory
-          $installPath = "${{ inputs.install_path }}"
-          if (-not (Test-Path $installPath)) {
-            New-Item -Path $installPath -ItemType Directory -Force
-          }
-
           # Download and extract
-          Write-Host "Downloading Ollama..."
-          Invoke-WebRequest -Uri $zipUrl -OutFile "ollama.zip"
+          Write-Host "Downloading Ollama from $zipUrl"
+          Invoke-WebRequest -Uri $zipUrl -OutFile "$ollamaDir\ollama.zip"
 
           Write-Host "Extracting Ollama..."
-          Expand-Archive -Path "ollama.zip" -DestinationPath $installPath -Force
+          Expand-Archive -Path "$ollamaDir\ollama.zip" -DestinationPath $ollamaDir -Force
 
-          # Add to PATH
-          $env:PATH = "$installPath;$env:PATH"
-          Write-Host "PATH=$env:PATH" | Out-File -FilePath $env:GITHUB_ENV -Append
+          # Verify installation
+          if (-not (Test-Path $ollamaExe)) {
+            throw "Ollama executable not found after installation"
+          }
 
-          Write-Host "Ollama installed successfully"
+          # Add to PATH and make it available to subsequent steps
+          $env:PATH = "$ollamaDir;$env:PATH"
+          echo "PATH=$env:PATH" >> $env:GITHUB_ENV
+
+          # Export the installation path for other steps
+          echo "OLLAMA_DIR=$ollamaDir" >> $env:GITHUB_ENV
+          echo "OLLAMA_EXE=$ollamaExe" >> $env:GITHUB_ENV
+
+          Write-Host "Ollama installed successfully at: $ollamaExe"
+          Write-Host "Current PATH: $env:PATH"
 
         } catch {
           Write-Host "Error during installation: $_"
@@ -96,8 +109,8 @@ runs:
           exit 1
         } finally {
           # Cleanup
-          if (Test-Path "ollama.zip") {
-            Remove-Item "ollama.zip" -Force
+          if (Test-Path "$ollamaDir\ollama.zip") {
+            Remove-Item "$ollamaDir\ollama.zip" -Force
           }
         }
     # Start Ollama Server (Platform Independent)
@@ -107,24 +120,44 @@ runs:
         echo "Starting Ollama server..."
 
         if [ "${{ steps.platform.outputs.platform }}" = "windows" ]; then
-          # Windows-specific start
-          powershell -Command "Start-Process ollama -ArgumentList 'serve' -NoNewWindow -RedirectStandardOutput ollama.log -RedirectStandardError ollama_error.log"
+          # Windows-specific start using full path
+          OLLAMA_EXE="C:/ollama/ollama.exe"
+          echo "Starting Ollama from: $OLLAMA_EXE"
+
+          powershell -Command "& {
+            try {
+              if (-not (Test-Path '$OLLAMA_EXE')) {
+                throw 'Ollama executable not found at: $OLLAMA_EXE'
+              }
+
+              Start-Process '$OLLAMA_EXE' -ArgumentList 'serve' -NoNewWindow -RedirectStandardOutput ollama.log -RedirectStandardError ollama_error.log
+
+              Write-Host 'Ollama server process started'
+            } catch {
+              Write-Host 'Error starting Ollama: $_'
+              exit 1
+            }
+          }"
         else
           # Unix-like systems (Linux/macOS)
           ollama serve > ollama.log 2>&1 &
           echo $! > ollama.pid
         fi
 
-        # More robust server check
+        # Server readiness check
         echo "Waiting for server to be ready..."
         TIMEOUT=30
         READY=0
         while [ $TIMEOUT -gt 0 ]; do
           if [ "${{ steps.platform.outputs.platform }}" = "windows" ]; then
-            # Windows check
-            powershell -Command "Test-NetConnection -ComputerName localhost -Port 11434 -WarningAction SilentlyContinue" && READY=1 && break
+            powershell -Command "
+              if (Test-NetConnection -ComputerName localhost -Port 11434 -WarningAction SilentlyContinue) {
+                exit 0
+              } else {
+                exit 1
+              }
+            " && READY=1 && break
           else
-            # Unix check
             curl -s http://localhost:11434/api/version >/dev/null && READY=1 && break
           fi
           echo "Waiting for server... ($TIMEOUT seconds remaining)"
@@ -151,7 +184,6 @@ runs:
           timeout ${{ inputs.timeout }} ollama pull ${{ inputs.model }}
         fi
 
-    # Execute Command
     - name: Execute Command
       shell: bash
       run: |
@@ -160,13 +192,11 @@ runs:
           sleep ${{ inputs.timeout }}
         else
           echo "Running model with prompt..."
-          RESPONSE=$(ollama run ${{ inputs.model }} "${{ inputs.prompt }}" 2>&1)
-          EXIT_CODE=$?
-          echo "$RESPONSE"
-
-          if [ $EXIT_CODE -ne 0 ]; then
-            echo "Error running model command"
-            exit $EXIT_CODE
+          if [ "${{ steps.platform.outputs.platform }}" = "windows" ]; then
+            OLLAMA_EXE="C:/ollama/ollama.exe"
+            powershell -Command "& '$OLLAMA_EXE' run ${{ inputs.model }} '${{ inputs.prompt }}'"
+          else
+            ollama run ${{ inputs.model }} "${{ inputs.prompt }}"
           fi
         fi
 
