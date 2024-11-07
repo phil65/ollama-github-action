@@ -15,7 +15,6 @@ jobs:
         uses: ./
         with:
           model: "smollm2:135m"
-          timeout: 5
 
   test-macos:
     runs-on: macos-latest
@@ -25,7 +24,6 @@ jobs:
         uses: ./
         with:
           model: "smollm2:135m"
-          timeout: 5
 
   test-windows:
     runs-on: windows-latest
@@ -35,4 +33,3 @@ jobs:
         uses: ./
         with:
           model: "smollm2:135m"
-          timeout: 5

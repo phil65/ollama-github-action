@@ -31,7 +31,6 @@ A GitHub Action to easily install and run Ollama models in your workflow. Suppor
   uses: phil65/ollama-github-action@v1
   with:
     model: "smollm2:135m"
-    timeout: 600
 ```
 
 ## Inputs
@@ -39,7 +38,6 @@ A GitHub Action to easily install and run Ollama models in your workflow. Suppor
 | Input | Description | Required | Default |
 |-------|-------------|----------|---------|
 | `model` | Ollama model to use (e.g., llama2, codellama, mistral) | Yes | `smollm2:135m` |
-| `timeout` | Timeout in seconds for operations | No | `300` |
 
 ## Outputs
 
@@ -73,7 +71,6 @@ jobs:
         uses: phil65/ollama-github-action@v1
         with:
           model: "smollm2:135m"
-          timeout: 300
 
       # Example: Use the Ollama server in subsequent steps
       - name: Use Ollama
@@ -135,14 +132,11 @@ The following environment variables are available during the workflow:
 
 ### Common Issues
 
-1. **Model Download Timeout**
-   - Increase the `timeout` parameter
-   - Verify model name is correct
+**Memory Issues**
 
-2. **Memory Issues**
-   - Use a runner with more RAM
-   - Try a smaller model
-   - Close unnecessary processes
+- Use a runner with more RAM
+- Try a smaller model
+- Close unnecessary processes
 
 ### Debug Logs
 

@@ -68,7 +68,7 @@ echo "Running Ollama in server mode on ${HOST}:${PORT}"
 
 # Pull the specified model
 echo "Pulling model: $MODEL"
-timeout $TIMEOUT ollama pull "$MODEL"
+ollama pull "$MODEL"
 
 if [ $? -ne 0 ]; then
     echo "Error: Failed to pull model $MODEL"
