@@ -11,7 +11,6 @@ A GitHub Action to easily install and run Ollama models in your workflow. Suppor
 - 🔄 Automatic installation and setup
 - 🎯 Run specific model commands or serve models
 - ⚡ Fast model pulling and execution
-- 🔒 Secure default configurations
 
 ## Prerequisites
 
@@ -37,58 +36,36 @@ A GitHub Action to easily install and run Ollama models in your workflow. Suppor
 - name: Serve Ollama Model
   uses: phil65/ollama-github-action@v1
   with:
-    model: codellama
+    model: "smollm2:135m"
     command: serve
     timeout: 600
-```
-
-### Docker Compose Example
-
-```yaml
-- name: Run Ollama with Docker
-  uses: phil65/ollama-github-action@v1
-  with:
-    model: "smollm2:135m"
-    use_docker: true
-    docker_compose_file: './custom-compose.yml'
 ```
 
 ## Inputs
 
 | Input | Description | Required | Default |
 |-------|-------------|----------|---------|
-| `model` | Ollama model to use (e.g., llama2, codellama, mistral) | Yes | `llama2` |
+| `model` | Ollama model to use (e.g., llama2, codellama, mistral) | Yes | `smollm2:135m` |
 | `command` | Command to run (`run` or `serve`) | No | `run` |
 | `prompt` | Prompt to send to the model | No | `Hello, how are you?` |
 | `timeout` | Timeout in seconds for operations | No | `300` |
-
-## Supported Models
-
-- llama2
-- codellama
-- mistral
-- vicuna
-- orca-mini
-- And [many more](https://ollama.ai/library)
 
 ## Platform-Specific Notes
 
 ### Linux
 - Runs natively using the official installer
-- Requires sudo privileges for installation
 
 ### macOS
+- Installs via Homebrew
 - Supports both Intel and Apple Silicon
-- Automatically detects and uses appropriate binary
 
 ### Windows
-- Uses official Windows installer
-- Custom installation path support
-- May require additional setup time
+- Uses the latest release from GitHub
+- Custom installation path at C:\ollama
 
 ## Examples
 
-### Using with Python
+### Using in a Workflow
 
 ```yaml
 jobs:
@@ -97,19 +74,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.x'
-
       - name: Run Ollama
         uses: phil65/ollama-github-action@v1
         with:
-          model: codellama
+          model: "smollm2:135m"
           prompt: "Write a Python function to calculate fibonacci numbers"
 ```
 
-### Long-Running Server
+### Running as a Server
 
 ```yaml
 jobs:
@@ -119,7 +91,7 @@ jobs:
       - name: Start Ollama Server
         uses: phil65/ollama-github-action@v1
         with:
-          model: llama2
+          model: "smollm2:135m"
           command: serve
           timeout: 3600  # 1 hour timeout
 ```
@@ -138,11 +110,6 @@ jobs:
    - Try a smaller model
    - Close unnecessary processes
 
-3. **Port Conflicts**
-   - Default port is 11434
-   - Check for other services using the same port
-   - Use Docker setup for better isolation
-
 ### Debug Logs
 
 Enable debug logging by setting:
@@ -154,26 +121,12 @@ env:
 
 ## Contributing
 
-Contributions are welcome! Please read our [Contributing Guidelines](CONTRIBUTING.md) first.
-
-1. Fork the repo
-2. Create your feature branch
-3. Commit your changes
-4. Push to the branch
-5. Open a Pull Request
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## Acknowledgments
-
-- [Ollama](https://ollama.ai/) for the amazing model serving framework
-- The GitHub Actions team
-- All contributors to this project
-
 ## Support
 
-- 📖 [Documentation](docs/README.md)
 - 🐛 [Issue Tracker](https://github.com/phil65/ollama-github-action/issues)
-- 💬 [Discussions](https://github.com/phil65/ollama-github-action/discussions)
