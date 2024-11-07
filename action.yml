@@ -200,30 +200,42 @@ runs:
           fi
         fi
 
-    # Cleanup
     - name: Cleanup
       if: always()
       shell: bash
       run: |
         echo "Cleaning up Ollama processes..."
-        if [ "${{ steps.platform.outputs.platform }}" = "windows" ]; then
-          powershell -Command "Stop-Process -Name ollama -Force -ErrorAction SilentlyContinue"
-        else
-          # More robust process cleanup
-          if [ -f ollama.pid ]; then
-            PID=$(cat ollama.pid)
-            if ps -p $PID > /dev/null 2>&1; then
-              kill $PID || true
-            else
-              echo "Process $PID not found (already terminated)"
+
+        case "${{ steps.platform.outputs.platform }}" in
+          windows)
+            # Windows cleanup using both process name and path
+            powershell -Command "
+              try {
+                if (Get-Process ollama -ErrorAction SilentlyContinue) {
+                  Stop-Process -Name ollama -Force -ErrorAction SilentlyContinue
+                }
+                if (Get-Process -Name 'ollama' -ErrorAction SilentlyContinue | Where-Object { $_.Path -like '*C:/ollama/ollama.exe' }) {
+                  Stop-Process -Name 'ollama' -Force -ErrorAction SilentlyContinue
+                }
+              } catch {
+                Write-Host 'No Ollama processes found or already terminated'
+              }
+            "
+            ;;
+
+          linux|macos)
+            # Unix-like systems cleanup
+            if [ -f ollama.pid ]; then
+              PID=$(cat ollama.pid)
+              if ps -p $PID > /dev/null 2>&1; then
+                kill $PID || true
+              fi
             fi
-          fi
+            pkill ollama 2>/dev/null || true
+            ;;
+        esac
 
-          # Backup cleanup method
-          pkill ollama 2>/dev/null || true
-        fi
-
-        # Display logs for debugging if they exist
+        # Display logs if they exist
         echo "Server logs:"
         [ -f ollama.log ] && cat ollama.log
         [ -f ollama_error.log ] && echo "Error logs:" && cat ollama_error.log
