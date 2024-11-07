@@ -1,0 +1,23 @@
+# System files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+ollama.log
+ollama.pid
+
+# Node modules (if you add any JS functionality later)
+node_modules/
+
+# Test artifacts
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
+# IDE specific files
+.idea/
+.vscode/
+*.swp
+*.swo

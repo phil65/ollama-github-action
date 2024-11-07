@@ -1,0 +1,39 @@
+name: Test Ollama Action
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test Ollama
+        uses: ./
+        with:
+          model: llama2
+          prompt: "Hello from Linux!"
+
+  test-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test Ollama
+        uses: ./
+        with:
+          model: llama2
+          prompt: "Hello from macOS!"
+
+  test-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test Ollama
+        uses: ./
+        with:
+          model: llama2
+          prompt: "Hello from Windows!"
+          install_path: 'C:\Ollama'

@@ -1,0 +1,144 @@
+name: 'Ollama Runner Action'
+description: 'Install and run Ollama with specified models'
+author: 'Your Name'
+
+inputs:
+  model:
+    description: 'Ollama model to use (e.g., llama2, codellama, mistral)'
+    required: true
+    default: 'llama2'
+  command:
+    description: 'Ollama command to run (run/serve)'
+    required: false
+    default: 'run'
+  prompt:
+    description: 'Prompt to send to the model'
+    required: false
+    default: 'Hello, how are you?'
+  timeout:
+    description: 'Timeout in seconds for operations'
+    required: false
+    default: '300'
+  install_path:
+    description: 'Custom installation path (Windows only)'
+    required: false
+    default: 'C:\Program Files\Ollama'
+
+runs:
+  using: 'composite'
+  steps:
+    # Platform Detection
+    - name: Detect Platform
+      id: platform
+      shell: bash
+      run: |
+        case "$(uname -s)" in
+          Linux*)     echo "platform=linux" >> $GITHUB_OUTPUT;;
+          Darwin*)    echo "platform=macos" >> $GITHUB_OUTPUT;;
+          MINGW64*)   echo "platform=windows" >> $GITHUB_OUTPUT;;
+          *)         echo "Unknown platform" && exit 1;;
+        esac
+
+    # Linux Installation
+    - name: Install Ollama (Linux)
+      if: steps.platform.outputs.platform == 'linux'
+      shell: bash
+      run: |
+        curl -fsSL https://ollama.ai/install.sh | sh
+        echo "Installed Ollama for Linux"
+
+    # macOS Installation
+    - name: Install Ollama (macOS)
+      if: steps.platform.outputs.platform == 'macos'
+      shell: bash
+      run: |
+        if [ "$(uname -m)" == "arm64" ]; then
+          OLLAMA_FILE="ollama-darwin-arm64"
+        else
+          OLLAMA_FILE="ollama-darwin-amd64"
+        fi
+        curl -fsSL "https://ollama.ai/download/${OLLAMA_FILE}" -o ollama
+        chmod +x ollama
+        sudo mv ollama /usr/local/bin/
+        echo "Installed Ollama for macOS"
+
+    # Windows Installation
+    - name: Install Ollama (Windows)
+      if: steps.platform.outputs.platform == 'windows'
+      shell: pwsh
+      run: |
+        $installerUrl = "https://ollama.ai/download/OllamaSetup.exe"
+        $installerPath = "$env:TEMP\OllamaSetup.exe"
+
+        # Download installer
+        Invoke-WebRequest -Uri $installerUrl -OutFile $installerPath
+
+        # Create installation directory
+        $installPath = "${{ inputs.install_path }}"
+        New-Item -Path $installPath -ItemType Directory -Force
+
+        # Install silently
+        Start-Process -FilePath $installerPath -ArgumentList "/S /D=$installPath" -Wait
+
+        # Add to PATH
+        $env:PATH = "$installPath;$env:PATH"
+        echo "PATH=$env:PATH" >> $GITHUB_ENV
+        echo "Installed Ollama for Windows"
+
+    # Start Ollama Server (Platform Independent)
+    - name: Start Ollama Server
+      shell: bash
+      run: |
+        # Start Ollama in background
+        if [ "${{ steps.platform.outputs.platform }}" = "windows" ]; then
+          start /B ollama serve > ollama.log 2>&1
+        else
+          ollama serve > ollama.log 2>&1 &
+        fi
+        echo $! > ollama.pid
+
+        # Wait for server
+        TIMEOUT=30
+        while [ $TIMEOUT -gt 0 ]; do
+          if nc -z localhost 11434 2>/dev/null; then
+            echo "Ollama server is running"
+            break
+          fi
+          sleep 1
+          TIMEOUT=$((TIMEOUT - 1))
+        done
+
+        if [ $TIMEOUT -eq 0 ]; then
+          echo "Failed to start Ollama server"
+          exit 1
+        fi
+
+    # Pull Model
+    - name: Pull Model
+      shell: bash
+      run: |
+        timeout ${{ inputs.timeout }} ollama pull ${{ inputs.model }}
+
+    # Execute Command
+    - name: Execute Command
+      shell: bash
+      run: |
+        if [ "${{ inputs.command }}" = "serve" ]; then
+          echo "Ollama is running in server mode"
+          sleep ${{ inputs.timeout }}
+        else
+          timeout ${{ inputs.timeout }} ollama run ${{ inputs.model }} "${{ inputs.prompt }}"
+        fi
+
+    # Cleanup
+    - name: Cleanup
+      if: always()
+      shell: bash
+      run: |
+        if [ "${{ steps.platform.outputs.platform }}" = "windows" ]; then
+          taskkill /F /IM ollama.exe || true
+        else
+          if [ -f ollama.pid ]; then
+            kill $(cat ollama.pid) || true
+          fi
+        fi
